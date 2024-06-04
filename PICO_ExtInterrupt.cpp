@@ -99,12 +99,12 @@ unsigned long GetLastMicros(unsigned long* buffer, unsigned long size)
 
 }
 
-#define PrintSize 128
+#define PrintSize 1024
 unsigned long microSecPrintBuffer[PrintSize];
 
 void PrintSample()
 {
-	int ret =  (int)GetLastMicros(microSecPrintBuffer, PrintSize);
+	int ret =  (int)GetLastMicros(microSecPrintBuffer, 128);
 	String str = "PrintSample " + String (ret, DEC);
 	for (int i = 0; i < ret - 1; i++) {
 		if (i == 0)
@@ -113,3 +113,27 @@ void PrintSample()
 	}
 	Serial.println(str);
 }
+
+void PrintStatistic()
+{
+#define STATISTIC_RANGE 128
+	unsigned long statisticMap[STATISTIC_RANGE];
+	memset(statisticMap, 0, sizeof(statisticMap));
+	int ret = (int)GetLastMicros(microSecPrintBuffer, PrintSize);
+	String str = "PrintStatistic " + String(ret, DEC) + " ";
+
+	for (int i = 0; i < ret - 1; i++) {
+		unsigned long v = microSecPrintBuffer[i + 1] - microSecPrintBuffer[i];
+		if (v < STATISTIC_RANGE)
+			statisticMap[v]++;
+		else
+			statisticMap[STATISTIC_RANGE - 1]++;
+	}
+	for (int i = 0; i < STATISTIC_RANGE; i++) {
+		if (statisticMap[i] > 0) {
+			str += String(i, DEC) + "-" + String(statisticMap[i], DEC) + ", ";
+		}
+	}
+	Serial.println(str);
+}
+

@@ -27,5 +27,5 @@ void loop() {
 
 	Serial.println(str);  
 
-	PrintSample (); 
+	PrintStatistic (); 
 }             
