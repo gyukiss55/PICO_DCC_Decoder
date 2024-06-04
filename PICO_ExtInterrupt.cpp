@@ -99,7 +99,7 @@ unsigned long GetLastMicros(unsigned long* buffer, unsigned long size)
 
 }
 
-#define PrintSize 1024
+#define PrintSize 512
 unsigned long microSecPrintBuffer[PrintSize];
 
 void PrintSample()
@@ -183,6 +183,7 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 	for (; i < sizeBuffer - 1; i++) {
 		int b0 = BitDetec(ptrBuffer[i]);
 		int b1 = BitDetec(ptrBuffer[i + 1]);
+		Serial.print(b0,DEC);
 		if (b0 == BITERROR || b1 == BITERROR) {
 			phase = 0;
 			phaseIndex = 0;
@@ -248,9 +249,19 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 	return i;
 }
 
+uint32_t DecodeCommand2(uint8_t* ptrBuffer, uint32_t sizeBuffer)
+{
+	String str = "Decode:";
+	for (uint32_t i = 0; i < sizeBuffer; i++) {
+		str += String(BitDetec(ptrBuffer[i]), DEC);
+	}
+	Serial.println(str);
+	return sizeBuffer;
+}
+
 void DecodeCommand()
 {
-#define HALFBITBUFFER_SIZE 128
+#define HALFBITBUFFER_SIZE 512
 	static unsigned long prevMicroSec = 0;
 	static uint8_t halfBitBuffer[HALFBITBUFFER_SIZE];
 	static uint32_t halfBitBufferIndex = 0;
@@ -275,7 +286,7 @@ void DecodeCommand()
 		}
 		prevMicroSec = microSecPrintBuffer[i];
 	}
-	uint32_t index = DecodeCommand(halfBitBuffer, halfBitBufferIndex);
+	uint32_t index = DecodeCommand2(halfBitBuffer, halfBitBufferIndex);
 	for (uint32_t i = 0; i < halfBitBufferIndex - index; i++) {
 		halfBitBuffer[i] = halfBitBuffer[index + i];
 	}
@@ -283,4 +294,6 @@ void DecodeCommand()
 
 	Serial.println(str);
 }
+
+
 
