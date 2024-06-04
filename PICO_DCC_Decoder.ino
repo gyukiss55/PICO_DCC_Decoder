@@ -28,4 +28,5 @@ void loop() {
 	Serial.println(str);  
 
 	PrintStatistic (); 
+	//DecodeCommand (); 
 }             

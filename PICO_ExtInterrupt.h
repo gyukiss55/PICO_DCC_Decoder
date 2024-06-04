@@ -6,3 +6,4 @@ unsigned long GetLastMicros(unsigned long* buffer, unsigned long size);
 
 void PrintSample();
 void PrintStatistic();
+void DecodeCommand();

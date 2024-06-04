@@ -137,3 +137,150 @@ void PrintStatistic()
 	Serial.println(str);
 }
 
+
+#define BIT1MAX 255
+
+#define BIT1HALF 58
+#define BIT0HALF 100
+#define BITHALFDELTA 5
+
+#define BIT0 0
+#define BIT1 1
+#define BITERROR 2
+#define BIT0LONG 3
+
+#define PREAMBLELENGHT 14*2
+
+#define DATABUFFERLENGTH 8
+
+
+int BitDetec (uint8_t v)
+{
+	if ((v > (BIT0HALF - BITHALFDELTA)) && (v < (BIT0HALF + BITHALFDELTA))) {
+		return BIT0; // bit 0 100 uSec
+	}
+	if ((v > (BIT1HALF - BITHALFDELTA)) && (v < (BIT1HALF + BITHALFDELTA))) {
+		return BIT1; // bit 1 58 uSec
+	}
+	if (v == BIT1MAX) {
+		return BIT0LONG; // bit max 9900 uSec
+	}
+	return BITERROR;	// error
+}
+
+
+uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
+{
+	static int phase = 0;
+	static int phaseIndex = 0;
+
+	static uint8_t dataBuffer[DATABUFFERLENGTH];
+	static uint32_t dataBufferIndex = 0;
+	static uint32_t dataBitIndex = 0;
+
+	uint32_t i = 0;
+
+	for (; i < sizeBuffer - 1; i++) {
+		int b0 = BitDetec(ptrBuffer[i]);
+		int b1 = BitDetec(ptrBuffer[i + 1]);
+		if (b0 == BITERROR || b1 == BITERROR) {
+			phase = 0;
+			phaseIndex = 0;
+			Serial.println("Detect Error1!");
+			continue;
+		}
+		if (phase == 0) {// preamble 14 pc bit 1
+			if (b0 == BIT1 && b1 == BIT1) {
+				phaseIndex++;
+				continue;
+			}
+			if (b0 == BIT1 && b1 == BIT0 && phaseIndex >= PREAMBLELENGHT) {
+				phase = 1;
+				phaseIndex = 0;
+				continue;
+			}
+			phase = 0;
+			phaseIndex = 0;
+			Serial.println("Detect Error2!");
+			continue;
+		}
+		if (phase == 1) {// preamble end bit 0
+			if (b0 == BIT0 && b1 == BIT0) {
+				phase = 2;
+				dataBufferIndex = 0;
+				dataBitIndex = 0;
+				i++;
+				continue;
+			}
+			phase = 0;
+			phaseIndex = 0;
+			Serial.println("Detect Error3!");
+			continue;
+		}
+		if (phase == 2) {// data
+			if (b0 == b1) {
+				if (dataBitIndex == 0)
+					dataBuffer[dataBufferIndex] = 0;
+				if (dataBitIndex < 8)
+					dataBuffer[dataBufferIndex] |= (b0 << dataBitIndex);
+				if (dataBitIndex == 8) {
+					dataBufferIndex++;
+					dataBitIndex = 0;
+					if (b0 == BIT1) {// end of error detect
+						phase = 0;
+						phaseIndex = 0;
+						String str = "Detected:";
+						for (int k = 0; k < dataBufferIndex; k++) {
+							str += String(dataBuffer[k], HEX) + ",";
+
+						}
+						Serial.println(str);
+					}
+				}
+				continue;
+			}
+			phase = 0;
+			phaseIndex = 0;
+			Serial.println("Detect Error4!");
+			continue;
+		}
+	}
+	return i;
+}
+
+void DecodeCommand()
+{
+#define HALFBITBUFFER_SIZE 128
+	static unsigned long prevMicroSec = 0;
+	static uint8_t halfBitBuffer[HALFBITBUFFER_SIZE];
+	static uint32_t halfBitBufferIndex = 0;
+
+	int ret = (int)GetLastMicros(microSecPrintBuffer, PrintSize);
+	String str = "DecodeCommand " + String(ret, DEC) + " ";
+
+	for (int i = 0; i < ret; i++) {
+		unsigned long v = 0;
+		if (prevMicroSec > 0) {
+			v = microSecPrintBuffer[i] - prevMicroSec;
+			if (v > BIT1MAX)
+				v = BIT1MAX;
+			halfBitBuffer[halfBitBufferIndex] = (uint8_t)v;
+			halfBitBufferIndex++;
+			if (halfBitBufferIndex >= HALFBITBUFFER_SIZE) {
+				str += "\r\nBuffer FULL!\r\n";
+				for (int j = 0; j < HALFBITBUFFER_SIZE; j++) {
+					str += String(halfBitBuffer[j], DEC) + ",";
+				}
+			}
+		}
+		prevMicroSec = microSecPrintBuffer[i];
+	}
+	uint32_t index = DecodeCommand(halfBitBuffer, halfBitBufferIndex);
+	for (uint32_t i = 0; i < halfBitBufferIndex - index; i++) {
+		halfBitBuffer[i] = halfBitBuffer[index + i];
+	}
+	halfBitBufferIndex -= index;
+
+	Serial.println(str);
+}
+
