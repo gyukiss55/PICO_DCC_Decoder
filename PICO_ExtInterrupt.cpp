@@ -7,7 +7,7 @@
 
 #include "PICO_ExtInterrupt.h"
 
-#define MicroSecBufferLength 1024
+#define MicroSecBufferLength 2048
 
 //SemaphoreHandle_t mutex;
 
@@ -142,7 +142,7 @@ void PrintStatistic()
 
 #define BIT1HALF 58
 #define BIT0HALF 100
-#define BITHALFDELTA 5
+#define BITHALFDELTA 10
 
 #define BIT0 0
 #define BIT1 1
@@ -183,11 +183,11 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 	for (; i < sizeBuffer - 1; i++) {
 		int b0 = BitDetec(ptrBuffer[i]);
 		int b1 = BitDetec(ptrBuffer[i + 1]);
-		Serial.print(b0,DEC);
+		//Serial.print(b0,DEC);
 		if (b0 == BITERROR || b1 == BITERROR) {
 			phase = 0;
 			phaseIndex = 0;
-			Serial.println("Detect Error1!");
+			Serial.print("!E1!");
 			continue;
 		}
 		if (phase == 0) {// preamble 14 pc bit 1
@@ -202,7 +202,7 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 			}
 			phase = 0;
 			phaseIndex = 0;
-			Serial.println("Detect Error2!");
+			Serial.print("@");
 			continue;
 		}
 		if (phase == 1) {// preamble end bit 0
@@ -210,21 +210,28 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 				phase = 2;
 				dataBufferIndex = 0;
 				dataBitIndex = 0;
+				//Serial.print(b1, DEC);
 				i++;
+				//Serial.print("<");
 				continue;
 			}
 			phase = 0;
 			phaseIndex = 0;
-			Serial.println("Detect Error3!");
+			Serial.print("!E3!");
 			continue;
 		}
 		if (phase == 2) {// data
 			if (b0 == b1) {
 				if (dataBitIndex == 0)
 					dataBuffer[dataBufferIndex] = 0;
-				if (dataBitIndex < 8)
-					dataBuffer[dataBufferIndex] |= (b0 << dataBitIndex);
+				if (dataBitIndex < 8) {
+					dataBuffer[dataBufferIndex] |= (b0 << (7 - dataBitIndex));
+					//String str = "[" + String(dataBitIndex,DEC) + "X" + String(dataBuffer[dataBufferIndex], HEX) + "]";
+					//Serial.print(str);
+					dataBitIndex++;
+				} else
 				if (dataBitIndex == 8) {
+					//Serial.print("#");
 					dataBufferIndex++;
 					dataBitIndex = 0;
 					if (b0 == BIT1) {// end of error detect
@@ -238,11 +245,14 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 						Serial.println(str);
 					}
 				}
+				//Serial.print(b1, DEC);
+				i++;
+
 				continue;
 			}
 			phase = 0;
 			phaseIndex = 0;
-			Serial.println("Detect Error4!");
+			Serial.print("!E4!");
 			continue;
 		}
 	}
@@ -261,13 +271,20 @@ uint32_t DecodeCommand2(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 
 void DecodeCommand()
 {
-#define HALFBITBUFFER_SIZE 512
+#define HALFBITBUFFER_SIZE MicroSecBufferLength
 	static unsigned long prevMicroSec = 0;
 	static uint8_t halfBitBuffer[HALFBITBUFFER_SIZE];
 	static uint32_t halfBitBufferIndex = 0;
 
 	int ret = (int)GetLastMicros(microSecPrintBuffer, PrintSize);
 	String str = "DecodeCommand " + String(ret, DEC) + " ";
+
+	if (ret > 1) {
+		str += String(microSecPrintBuffer[0], DEC) + "-";
+		str += String(microSecPrintBuffer[ret - 1], DEC) + "=";
+		str += String(microSecPrintBuffer[ret - 1] - microSecPrintBuffer[0], DEC) + "/";
+		str += String(prevMicroSec, DEC) + ".";
+	}
 
 	for (int i = 0; i < ret; i++) {
 		unsigned long v = 0;
@@ -280,17 +297,26 @@ void DecodeCommand()
 			if (halfBitBufferIndex >= HALFBITBUFFER_SIZE) {
 				str += "\r\nBuffer FULL!\r\n";
 				for (int j = 0; j < HALFBITBUFFER_SIZE; j++) {
-					str += String(halfBitBuffer[j], DEC) + ",";
+					//str += String(halfBitBuffer[j], DEC) + ",";
 				}
 			}
 		}
 		prevMicroSec = microSecPrintBuffer[i];
 	}
-	uint32_t index = DecodeCommand2(halfBitBuffer, halfBitBufferIndex);
-	for (uint32_t i = 0; i < halfBitBufferIndex - index; i++) {
-		halfBitBuffer[i] = halfBitBuffer[index + i];
+
+	if (ret > 1 && halfBitBufferIndex > 1) {
+		uint32_t index = DecodeCommand(halfBitBuffer, halfBitBufferIndex);
+		str += String(index, DEC) + ",";
+		str += String(halfBitBufferIndex, DEC) + ",";
+		if (index < halfBitBufferIndex) {
+			for (uint32_t i = 0; i < halfBitBufferIndex - index; i++) {
+				halfBitBuffer[i] = halfBitBuffer[index + i];
+			}
+			halfBitBufferIndex -= index;
+		}
+		else
+			halfBitBufferIndex = 0;
 	}
-	halfBitBufferIndex -= index;
 
 	Serial.println(str);
 }
