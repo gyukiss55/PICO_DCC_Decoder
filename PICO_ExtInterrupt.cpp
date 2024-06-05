@@ -237,12 +237,12 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 					if (b0 == BIT1) {// end of error detect
 						phase = 0;
 						phaseIndex = 0;
-						String str = "Detected:";
+						String str = "\r\nDetected:";
 						for (int k = 0; k < dataBufferIndex; k++) {
 							str += String(dataBuffer[k], HEX) + ",";
 
 						}
-						Serial.println(str);
+						Serial.print(str);
 					}
 				}
 				//Serial.print(b1, DEC);
