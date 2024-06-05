@@ -27,6 +27,7 @@ void loopBlink()
 			state = !state;
 			digitalWrite(LED_BUILTIN, HIGH);
 			tsPrev = ts;
+			Serial.print('.');
 		}
 	}
 	else {
@@ -43,10 +44,11 @@ void loopDecode()
 	static std::list<String> strList;
 	static uint32_t tsPrev = 0;
 	uint32_t ts = millis();
-	if (ts - tsPrev >= 10) {
+	if (ts - tsPrev >= 20) {
 		String str;
 		DecodeCommand(str, false);
-		strList.push_back(str);
+		if (str.length () > 0)
+			strList.push_back(str);
 		tsPrev = ts;
 	}
 	if (strList.size() >= 10) {
