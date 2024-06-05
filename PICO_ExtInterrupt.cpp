@@ -169,7 +169,7 @@ int BitDetec (uint8_t v)
 }
 
 
-uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
+uint32_t DecodeCommand(String& result, uint8_t* ptrBuffer, uint32_t sizeBuffer, bool debugPrint /*= false*/)
 {
 	static int phase = 0;
 	static int phaseIndex = 0;
@@ -183,11 +183,12 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 	for (; i < sizeBuffer - 1; i++) {
 		int b0 = BitDetec(ptrBuffer[i]);
 		int b1 = BitDetec(ptrBuffer[i + 1]);
-		//Serial.print(b0,DEC);
+		//if (debugPrint) Serial.print(b0,DEC);
 		if (b0 == BITERROR || b1 == BITERROR) {
 			phase = 0;
 			phaseIndex = 0;
-			Serial.print("!E1!");
+			if (debugPrint) 
+				Serial.print("!E1!");
 			continue;
 		}
 		if (phase == 0) {// preamble 14 pc bit 1
@@ -202,7 +203,8 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 			}
 			phase = 0;
 			phaseIndex = 0;
-			Serial.print("@");
+			if (debugPrint)
+				Serial.print("@");
 			continue;
 		}
 		if (phase == 1) {// preamble end bit 0
@@ -210,9 +212,7 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 				phase = 2;
 				dataBufferIndex = 0;
 				dataBitIndex = 0;
-				//Serial.print(b1, DEC);
 				i++;
-				//Serial.print("<");
 				continue;
 			}
 			phase = 0;
@@ -226,33 +226,31 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 					dataBuffer[dataBufferIndex] = 0;
 				if (dataBitIndex < 8) {
 					dataBuffer[dataBufferIndex] |= (b0 << (7 - dataBitIndex));
-					//String str = "[" + String(dataBitIndex,DEC) + "X" + String(dataBuffer[dataBufferIndex], HEX) + "]";
-					//Serial.print(str);
 					dataBitIndex++;
 				} else
 				if (dataBitIndex == 8) {
-					//Serial.print("#");
 					dataBufferIndex++;
 					dataBitIndex = 0;
 					if (b0 == BIT1) {// end of error detect
 						phase = 0;
 						phaseIndex = 0;
-						String str = "\r\nDetected:";
+						String strDebug = "Detected:";
+						result += "{";
 						for (int k = 0; k < dataBufferIndex; k++) {
-							str += String(dataBuffer[k], HEX) + ",";
-
+							if (debugPrint) strDebug += String(dataBuffer[k], HEX) + ",";
+							result += String(dataBuffer[k], HEX) + ",";
 						}
-						Serial.print(str);
+						if (debugPrint) Serial.println(strDebug);
+						result += "}";
 					}
 				}
-				//Serial.print(b1, DEC);
 				i++;
 
 				continue;
 			}
 			phase = 0;
 			phaseIndex = 0;
-			Serial.print("!E4!");
+			if (debugPrint) Serial.print("!E4!");
 			continue;
 		}
 	}
@@ -261,29 +259,33 @@ uint32_t DecodeCommand(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 
 uint32_t DecodeCommand2(uint8_t* ptrBuffer, uint32_t sizeBuffer)
 {
-	String str = "Decode:";
+	String strDebug = "Decode:";
 	for (uint32_t i = 0; i < sizeBuffer; i++) {
-		str += String(BitDetec(ptrBuffer[i]), DEC);
+		strDebug += String(BitDetec(ptrBuffer[i]), DEC);
 	}
-	Serial.println(str);
+	Serial.println(strDebug);
 	return sizeBuffer;
 }
 
-void DecodeCommand()
+void DecodeCommand(String& result, bool debugPrint /*= false*/)
 {
 #define HALFBITBUFFER_SIZE MicroSecBufferLength
 	static unsigned long prevMicroSec = 0;
 	static uint8_t halfBitBuffer[HALFBITBUFFER_SIZE];
 	static uint32_t halfBitBufferIndex = 0;
 
+	result = "";
 	int ret = (int)GetLastMicros(microSecPrintBuffer, PrintSize);
-	String str = "DecodeCommand " + String(ret, DEC) + " ";
+	String strDebug = "DecodeCommand " + String(ret, DEC) + " ";
 
 	if (ret > 1) {
-		str += String(microSecPrintBuffer[0], DEC) + "-";
-		str += String(microSecPrintBuffer[ret - 1], DEC) + "=";
-		str += String(microSecPrintBuffer[ret - 1] - microSecPrintBuffer[0], DEC) + "/";
-		str += String(prevMicroSec, DEC) + ".";
+		result += String(microSecPrintBuffer[0], DEC) + "/";
+		if (debugPrint) {
+			strDebug += String(microSecPrintBuffer[0], DEC) + "-";
+			strDebug += String(microSecPrintBuffer[ret - 1], DEC) + "=";
+			strDebug += String(microSecPrintBuffer[ret - 1] - microSecPrintBuffer[0], DEC) + "/";
+			strDebug += String(prevMicroSec, DEC) + ".";
+		}
 	}
 
 	for (int i = 0; i < ret; i++) {
@@ -295,9 +297,10 @@ void DecodeCommand()
 			halfBitBuffer[halfBitBufferIndex] = (uint8_t)v;
 			halfBitBufferIndex++;
 			if (halfBitBufferIndex >= HALFBITBUFFER_SIZE) {
-				str += "\r\nBuffer FULL!\r\n";
+				if (debugPrint) 
+					strDebug += "\r\nBuffer FULL!\r\n";
 				for (int j = 0; j < HALFBITBUFFER_SIZE; j++) {
-					//str += String(halfBitBuffer[j], DEC) + ",";
+					//if (debugPrint) strDebug += String(halfBitBuffer[j], DEC) + ",";
 				}
 			}
 		}
@@ -305,9 +308,11 @@ void DecodeCommand()
 	}
 
 	if (ret > 1 && halfBitBufferIndex > 1) {
-		uint32_t index = DecodeCommand(halfBitBuffer, halfBitBufferIndex);
-		str += String(index, DEC) + ",";
-		str += String(halfBitBufferIndex, DEC) + ",";
+		uint32_t index = DecodeCommand(result, halfBitBuffer, halfBitBufferIndex, debugPrint);
+		if (debugPrint) {
+			strDebug += String(index, DEC) + ",";
+			strDebug += String(halfBitBufferIndex, DEC) + ",";
+		}
 		if (index < halfBitBufferIndex) {
 			for (uint32_t i = 0; i < halfBitBufferIndex - index; i++) {
 				halfBitBuffer[i] = halfBitBuffer[index + i];
@@ -317,8 +322,9 @@ void DecodeCommand()
 		else
 			halfBitBufferIndex = 0;
 	}
-
-	Serial.println(str);
+	if (debugPrint) {
+		Serial.println(strDebug);
+	}
 }
 
 

@@ -1,4 +1,5 @@
 
+#include <list>
 #include "PICO_ExtInterrupt.h"
 
 
@@ -16,17 +17,50 @@ void setup() {
 	ExtInterruptSetup (13);
 }
 
+void loopBlink()
+{
+	static uint32_t tsPrev = 0;
+	static bool state = false;
+	uint32_t ts = millis();
+	if (state) {
+		if (ts - tsPrev >= 900) {
+			state = !state;
+			digitalWrite(LED_BUILTIN, HIGH);
+			tsPrev = ts;
+		}
+	}
+	else {
+		if (ts - tsPrev >= 100) {
+			state = !state;
+			digitalWrite(LED_BUILTIN, LOW);
+			tsPrev = ts;
+		}
+	}
+}
+
+void loopDecode()
+{
+	static std::list<String> strList;
+	static uint32_t tsPrev = 0;
+	uint32_t ts = millis();
+	if (ts - tsPrev >= 10) {
+		String str;
+		DecodeCommand(str, false);
+		strList.push_back(str);
+		tsPrev = ts;
+	}
+	if (strList.size() >= 10) {
+		std::list<String> strList2 = strList;
+		strList.clear();
+		for (String str : strList2)
+		{
+			Serial.println(str);
+		}
+	}
+
+}
 
 void loop() {
-	digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-	delay(100);                      // wait for a second
-	digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-	delay(900);
- 
-	String str = String(millis(), DEC) + "sec";
-
-	Serial.println(str);  
-
-	//PrintStatistic (); 
-	DecodeCommand (); 
+	loopBlink ();
+	loopDecode (); 
 }             

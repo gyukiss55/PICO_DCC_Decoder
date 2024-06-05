@@ -2,4 +2,5 @@
 PICO DCC Decoder
 
  - 1. Add source of PICO DCC Decoder
- 
+ - 2. Fixing some loops and debug string
+
