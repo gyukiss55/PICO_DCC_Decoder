@@ -27,6 +27,7 @@ void loopBlink()
 			state = !state;
 			digitalWrite(LED_BUILTIN, HIGH);
 			tsPrev = ts;
+			Serial.print('.');
 		}
 	}
 	else {
