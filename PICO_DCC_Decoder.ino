@@ -16,7 +16,7 @@ void setup() {
 	Serial.println(version);
 	pinMode(LED_BUILTIN, OUTPUT);
 
-	ExtInterruptSetup (13);
+	//ExtInterruptSetup (13);
 
 	SetupPWM (DECODER_ADDRESS);
 	SetupServer ();
@@ -69,9 +69,9 @@ void loopDecode()
 
 void loop() {
 	loopBlink ();
-	loopDecode (); 
+	//loopDecode (); 
 	//LoopPWM ();
-  String receivedStr;
+    String receivedStr;
 	LoopServer (receivedStr);
-  PWMCommand (receivedStr);
+    PWMCommand (receivedStr);
 }             

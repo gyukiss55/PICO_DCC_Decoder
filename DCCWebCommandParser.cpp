@@ -94,10 +94,10 @@ bool WebCommandParser::GetDirectionAndSpeed(bool& forward, uint8_t& speed) const
     forward = true;
     speed = 0;
     uint8_t value = result[1];
-    if ((result_nr == 2) && ((value & 0xC0) == 0x40)) {
+    if ((result_nr == 4) && ((value & 0xC0) == 0x40)) {
         if ((value & 0x20) == 0)
             forward = false;
-        if ((value & 0x0f) > 2) {
+        if ((value & 0x0f) > 1) {
             speed = (value & 0x0f) * 2;
             if (value & 0x10)
                 speed++;

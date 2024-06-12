@@ -95,7 +95,9 @@ void PWMCommand (const String& receivedStr)
 {
     if (receivedStr.length() > 0) {
         std::string commandStr (receivedStr.c_str());
-        WebCommandParser parser(commandStr);
+        WebCommandParser parser (commandStr);
+        Serial.print("PWMCommand begin:");
+        Serial.println(commandStr.c_str ());
         if (parser.IsAlertStop()) {
             digitalWrite(motorEnablePin, LOW);
             speed = 0;
@@ -106,16 +108,25 @@ void PWMCommand (const String& receivedStr)
         else {
             bool forward = false;
             uint8_t speedBack;
-            if (parser.GetDirectionAndSpeed(forward, speedBack)) {
+            if (parser.GetDirectionAndSpeed(forward, speedBack)); {
                 direction = !forward;
+                speed = (speedBack & 0x1f) * 8;
                 if (direction)
                     analogWrite(motorPWMPin1, speed);
                 else
                     analogWrite(motorPWMPin2, speed);
                 digitalWrite(motorEnablePin, HIGH);
+
+                Serial.print("Direction:");
+                if (direction)
+                    Serial.println("backward");
+                else 
+                    Serial.println("forward");
+                Serial.print("Speed:");
+                Serial.println(speed, DEC);
             }
 
         }
-
+        Serial.println("PWMCommand end.");
     }
 }
