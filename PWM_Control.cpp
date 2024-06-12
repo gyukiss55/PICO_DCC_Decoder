@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "PWM_Control.h"
+#include "DCCWebCommandParser.h"
 
 #define TIMEINCSPEED        50
 #define TIMEDECSPEED        50
@@ -16,10 +17,12 @@ const int motorEnablePin = 18; // PWM-enable for motor control
 int state = 0;
 uint32_t prevMillis = 0;
 int speed = 0;
+int address = 0;
 bool direction = false;
 
-void SetupPWM()
+void SetupPWM(int addr)
 {
+    address = addr;
     pinMode(motorPWMPin1, OUTPUT);
     pinMode(motorPWMPin2, OUTPUT);
     pinMode(motorEnablePin, OUTPUT);
@@ -84,5 +87,35 @@ void LoopPWM()
         state = 0;
         digitalWrite(motorEnablePin, LOW);
         break;
+    }
+}
+
+
+void PWMCommand (const String& receivedStr)
+{
+    if (receivedStr.length() > 0) {
+        std::string commandStr (receivedStr.c_str());
+        WebCommandParser parser(commandStr);
+        if (parser.IsAlertStop()) {
+            digitalWrite(motorEnablePin, LOW);
+            speed = 0;
+            direction = false;
+            analogWrite(motorPWMPin1, speed);
+            analogWrite(motorPWMPin2, speed);
+        }
+        else {
+            bool forward = false;
+            uint8_t speedBack;
+            if (parser.GetDirectionAndSpeed(forward, speedBack)) {
+                direction = !forward;
+                if (direction)
+                    analogWrite(motorPWMPin1, speed);
+                else
+                    analogWrite(motorPWMPin2, speed);
+                digitalWrite(motorEnablePin, HIGH);
+            }
+
+        }
+
     }
 }
