@@ -1,7 +1,7 @@
 
 #include <list>
 #include "PICO_ExtInterrupt.h"
-
+#include "PWM_Control.h"
 
 #define version "PICO Decoder V.0.01"
 
@@ -15,6 +15,7 @@ void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
 
 	ExtInterruptSetup (13);
+  SetupPWM ();
 }
 
 void loopBlink()
@@ -65,4 +66,5 @@ void loopDecode()
 void loop() {
 	loopBlink ();
 	loopDecode (); 
+  LoopPWM ();
 }             
