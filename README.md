@@ -6,3 +6,4 @@ PICO DCC Decoder
  - 3. Stabil decode process
  - 4. PWM control
  - 5. Wifi server
+ - 6. UART1

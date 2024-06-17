@@ -1,0 +1,2 @@
+
+#define Serial Serial2

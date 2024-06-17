@@ -2,16 +2,21 @@
 #include <list>
 #include "PICO_ExtInterrupt.h"
 #include "PWM_Control.h"
-#include "PIKO_Wifi.h"
+#include "PICO_Wifi.h"
+#include "PICO_UART1.h"
 
-#define version "PICO Decoder V.0.01"
+
+#define version "PICO Decoder V.1.01"
 #define DECODER_ADDRESS 12
 
 void setup() {
 	Serial.begin(115200);
-	while (!Serial) {
+	//while (!Serial) {
 		; // wait for serial port to connect. Needed for native USB port only
-	}
+	//}
+	delay(2000);
+
+	SetupUART1 ();
 
 	Serial.println(version);
 	pinMode(LED_BUILTIN, OUTPUT);
@@ -68,6 +73,8 @@ void loopDecode()
 }
 
 void loop() {
+	LoopUART1 ();
+
 	loopBlink ();
 	//loopDecode (); 
 	//LoopPWM ();

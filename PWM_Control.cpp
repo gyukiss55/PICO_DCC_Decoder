@@ -4,6 +4,7 @@
 
 #include "PWM_Control.h"
 #include "DCCWebCommandParser.h"
+#include "PICO_UART1_Def.h"
 
 #define TIMEINCSPEED        50
 #define TIMEDECSPEED        50
